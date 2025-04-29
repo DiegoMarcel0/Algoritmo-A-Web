@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Grilla con Obstáculos</title>
+  <style>
+    .grid {
+      display: grid;
+      grid-template-columns: repeat({{ size }}, 30px);
+      grid-template-rows: repeat({{ size }}, 30px);
+      gap: 1px;
+      margin: auto;
+      width: fit-content;
+    }
+
+    .cell {
+      width: 30px;
+      height: 30px;
+      background-color: #eee;
+      border: 1px solid #ccc;
+    }
+
+    .start { background-color: green; }
+    .end { background-color: red; }
+    .wall { background-color: black; }
+    .path { background-color: gold; }
+    .visited { background-color: #87CEFA; }
+
+  </style>
+  <script >
+    function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  function cargarListaGrafos() {
+    fetch('/AEstrella/listar-grafos/')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('grafo-select');
+        select.innerHTML = '<option value="">Cargar grafo guardado</option>';
+        data.forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.nombre;
+          select.appendChild(opt);
+        });
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', cargarListaGrafos);
+  const csrftoken = getCookie('csrftoken');
+
+  </script>
+  
+</head>
+<body>
+  <h1 style="text-align: center;">Grilla con Obstáculos y A*</h1>
+  <div style="text-align: center; margin: 10px;">
+    <input type="text" id="nombre-grafo" placeholder="Nombre del grafo">
+    <button onclick="guardarGrafo()">Guardar grafo</button>
+  
+    <select id="grafo-select" onchange="cargarGrafo()">
+      <option value="">Cargar grafo guardado</option>
+    </select>
+  </div>
+  
+  <div id="grid" class="grid"></div>
+  <p style="text-align:center;">
+    Click para agregar <strong>muros</strong>. Shift+Click para marcar <strong>inicio</strong>. Alt+Click para <strong>fin</strong>.
+  </p>
+  <div style="margin-top: 20px; text-align: center;">
+    <h2>Comparar heurísticas</h2>
+    <button onclick="probarHeuristicas()">Probar A*</button>
+    <div id="grillas-heuristicas" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;"></div>
+  </div>
+  
+  <script>
+    const size = {{ size }};
+    const grid = document.getElementById('grid');
+    let start = null;
+    let end = null;
+    let walls = new Set();
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.id = `cell-${x}-${y}`;
+        cell.dataset.x = x;
+        cell.dataset.y = y;
+
+        cell.addEventListener('click', (e) => {
+          const key = `${x},${y}`;
+
+          if (e.shiftKey) {
+            if (start) document.getElementById(`cell-${start[0]}-${start[1]}`).classList.remove('start');
+            start = [x, y];
+            cell.classList.add('start');
+          } else if (e.altKey) {
+            if (end) document.getElementById(`cell-${end[0]}-${end[1]}`).classList.remove('end');
+            end = [x, y];
+            cell.classList.add('end');
+          } else {
+            if (!walls.has(key)) {
+              walls.add(key);
+              cell.classList.add('wall');
+              cell.classList.remove('visited');
+              cell.classList.remove('path');
+            } else {
+              walls.delete(key);
+              cell.classList.remove('wall');
+            }
+          }
+        });
+
+        grid.appendChild(cell);
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (!start || !end) {
+          alert("Seleccioná un punto de inicio y fin con Shift y Alt clic.");
+          return;
+        }
+        fetch('/AEstrella/resolver-astar_old/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+          },
+          body: JSON.stringify({
+            size: size,
+            start: start,
+            end: end,
+            walls: Array.from(walls).map(k => k.split(',').map(Number))
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          const delay = 50;
+
+          // Limpiar estado anterior
+          document.querySelectorAll('.visited').forEach(c => c.classList.remove('visited'));
+          document.querySelectorAll('.path').forEach(c => c.classList.remove('path'));
+
+          // Mostrar nodos visitados paso a paso
+          data.visitados.forEach((nodo, i) => {
+            setTimeout(() => {
+              const [x, y] = nodo;
+              const cell = document.getElementById(`cell-${x}-${y}`);
+              if (cell && !cell.classList.contains('start') && !cell.classList.contains('end'))
+                cell.classList.add('visited');
+            }, i * delay);
+          });
+
+          // Mostrar camino final después
+          setTimeout(() => {
+            data.camino.forEach((nodo, i) => {
+              setTimeout(() => {
+                const [x, y] = nodo;
+                const cell = document.getElementById(`cell-${x}-${y}`);
+                if (cell && !cell.classList.contains('start') && !cell.classList.contains('end')){
+                  cell.classList.add('path');
+                  cell.classList.remove('visited');
+                }
+                  
+              }, i * delay);
+            });
+          }, data.visitados.length * delay + 100);
+        });
+      }
+    });
+    function guardarGrafo() {
+      if (!start || !end) {
+        alert("Definí punto de inicio y fin.");
+        return;
+      }
+
+      const nombre = document.getElementById('nombre-grafo').value || 'Sin nombre';
+      const wallsArr = Array.from(walls).map(k => k.split(',').map(Number));
+
+      fetch('/AEstrella/guardar-grafo/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+          nombre: nombre,
+          size: size,
+          start: start,
+          end: end,
+          walls: wallsArr
+        })
+      }).then(res => res.json())
+        .then(data => {
+          alert("¡Grafo guardado!");
+          cargarListaGrafos();
+        });
+    }
+
+    function cargarGrafo() {
+      const id = document.getElementById('grafo-select').value;
+      if (!id) return;
+
+      fetch(`/AEstrella/cargar-grafo/${id}/`)
+        .then(res => res.json())
+        .then(data => {
+          start = data.start;
+          end = data.end;
+          walls = new Set(data.walls.map(w => `${w[0]},${w[1]}`));
+
+          // Limpiar grilla
+          document.querySelectorAll('.cell').forEach(cell => {
+            cell.className = 'cell';
+          });
+
+          document.getElementById(`cell-${start[0]}-${start[1]}`).classList.add('start');
+          document.getElementById(`cell-${end[0]}-${end[1]}`).classList.add('end');
+          walls.forEach(key => {
+            const [x, y] = key.split(',').map(Number);
+            document.getElementById(`cell-${x}-${y}`).classList.add('wall');
+          });
+        });
+    }
+    function probarHeuristicas() {
+      const heuristicas = ['manhattan', 'euclidiana', 'chebyshev'];
+
+      const grillasDiv = document.getElementById('grillas-heuristicas');
+      grillasDiv.innerHTML = '';  // Limpiar
+
+      heuristicas.forEach(heuristica => {
+        // Crear mini-grilla
+        const gridContainer = document.createElement('div');
+        gridContainer.innerHTML = `<h4>${heuristica}</h4>`;
+        const grid = document.createElement('div');
+        grid.classList.add('grid');
+        /* grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = `repeat(${size}, 15px)`;
+        grid.style.gridGap = '1px'; */
+        gridContainer.appendChild(grid);
+
+        // Crear celdas
+        for (let x = 0; x < size; x++) {
+          for (let y = 0; y < size; y++) {
+            const cell = document.createElement('div');
+            cell.id = `mini-${heuristica}-${x}-${y}`;
+            cell.classList.add('cell');
+            /* cell.style.width = '15px';
+            cell.style.height = '15px';
+            cell.style.backgroundColor = 'white'; */
+            grid.appendChild(cell);
+          }
+        }
+
+        grillasDiv.appendChild(gridContainer);
+
+        // Pedir resolución al backend
+        fetch('/AEstrella/resolver-astar/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+          },
+          body: JSON.stringify({
+            size: size,
+            start: start,
+            end: end,
+            walls: Array.from(walls).map(k => k.split(',').map(Number)),
+            heuristica: heuristica
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          delay=50;
+          document.getElementById(`mini-${heuristica}-${start[1]}-${start[0]}`).style.backgroundColor = 'green';
+          document.getElementById(`mini-${heuristica}-${end[1]}-${end[0]}`).style.backgroundColor = 'red';
+          walls.forEach(key => {
+            const [y, x] = key.split(',').map(Number);
+            document.getElementById(`mini-${heuristica}-${x}-${y}`).classList.add('wall');
+          });
+          data.visitados.forEach((nodo, i=50) => {
+            setTimeout(() => {
+              const [y, x] = nodo;
+              const cell = document.getElementById(`mini-${heuristica}-${x}-${y}`);
+              if (cell) cell.classList.add('visited'); // Celeste visitado
+            }, i * 50);
+          });
+
+          setTimeout(() => {
+            data.camino.forEach((nodo, i) => {
+              setTimeout(() => {
+                const [y, x] = nodo;
+                const cell = document.getElementById(`mini-${heuristica}-${x}-${y}`);
+                if (cell) {
+                  cell.classList.add('path');
+                  cell.classList.remove('visited');
+                } // Amarillo camino
+              }, i * 10);
+            });
+          }, data.visitados.length * 50);
+          
+        });
+      });
+    }
+
+  </script>
+</body>
+</html>

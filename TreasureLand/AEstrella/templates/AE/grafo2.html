@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Visualización de Grafo</title>
+  <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+  <style>
+    #cy {
+      width: 800px;
+      height: 600px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Grafo con Cytoscape.js</h1>
+  <div id="cy"></div>
+
+  <script>
+    fetch('/AEstrella/grafo-json2/')
+  .then(res => res.json())
+  .then(data => {
+    const cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: [...data.nodes, ...data.edges],
+      style: [
+        { selector: 'node', style: { 'label': 'data(id)' } },
+        { selector: 'edge', style: { 'label': 'data(weight)' } }
+      ],
+      layout: { name: 'breadthfirst' }
+    });
+
+    // Resaltar el camino
+    const camino = data.path;
+    for (let i = 0; i < camino.length - 1; i++) {
+      cy.getElementById(camino[i]).style('background-color', 'orange');
+      cy.edges().forEach(edge => {
+        if (edge.data('source') === camino[i] && edge.data('target') === camino[i+1]) {
+          edge.style('line-color', 'orange');
+        }
+      });
+    }
+  });
+  </script>
+</body>
+</html>

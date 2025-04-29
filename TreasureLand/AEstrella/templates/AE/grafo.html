@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Visualización de Grafo</title>
+  <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+  <style>
+    #cy {
+      width: 800px;
+      height: 600px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Grafo con Cytoscape.js</h1>
+  <div id="cy"></div>
+
+  <script>
+    fetch('/AEstrella/grafo-json/')
+      .then(response => response.json())
+      .then(data => {
+        cytoscape({
+          container: document.getElementById('cy'),
+          elements: [...data.nodes, ...data.edges],
+          style: [
+            { selector: 'node', style: { 'label': 'data(id)', 'background-color': '#4f83cc' } },
+            { selector: 'edge', style: { 'label': 'data(weight)', 'line-color': '#ccc' } }
+          ],
+          layout: { name: 'grid' }
+        });
+      });
+  </script>
+</body>
+</html>

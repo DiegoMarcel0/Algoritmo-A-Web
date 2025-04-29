@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mapa tipo Cuadros</title>
+  <style>
+    #grid {
+      display: grid;
+      grid-template-columns: repeat({{ size }}, 30px);
+      grid-template-rows: repeat({{ size }}, 30px);
+      gap: 1px;
+      margin: auto;
+      width: fit-content;
+    }
+
+    .cell {
+      width: 30px;
+      height: 30px;
+      background-color: #eee;
+      border: 1px solid #ccc;
+    }
+
+    .start { background-color: green; }
+    .end { background-color: red; }
+    .wall { background-color: black; }
+    .visited { background-color: lightblue; }
+    .path { background-color: gold; }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">Mapa tipo Grilla (Cuadros)</h1>
+  <div id="grid"></div>
+
+  <script>
+    const size = {{ size }};
+    const grid = document.getElementById('grid');
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.id = `cell-${x}-${y}`;
+        grid.appendChild(cell);
+      }
+    }
+
+    // Podés agregar lógica de clics, muros, etc. luego
+  </script>
+</body>
+</html>
