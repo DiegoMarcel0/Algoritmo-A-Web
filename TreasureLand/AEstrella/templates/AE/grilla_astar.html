@@ -79,7 +79,7 @@
   </p>
   <div style="margin-top: 20px; text-align: center;">
     <h2>Comparar heurísticas</h2>
-    <button onclick="probarHeuristicas()">Probar A*</button>
+    <!-- <button onclick="probarHeuristicas()">Probar A*</button> -->
     <div id="grillas-heuristicas" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;"></div>
   </div>
   
@@ -132,7 +132,7 @@
           alert("Seleccioná un punto de inicio y fin con Shift y Alt clic.");
           return;
         }
-        fetch('/AEstrella/resolver-astar_old/', {
+        fetch('/AEstrella/resolver-astar/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -142,7 +142,8 @@
             size: size,
             start: start,
             end: end,
-            walls: Array.from(walls).map(k => k.split(',').map(Number))
+            walls: Array.from(walls).map(k => k.split(',').map(Number)),
+            heuristica: 'zero'
           })
         })
         .then(res => res.json())
@@ -178,6 +179,7 @@
             });
           }, data.visitados.length * delay + 100);
         });
+        probarHeuristicas();
       }
     });
     function guardarGrafo() {
@@ -245,9 +247,6 @@
         gridContainer.innerHTML = `<h4>${heuristica}</h4>`;
         const grid = document.createElement('div');
         grid.classList.add('grid');
-        /* grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = `repeat(${size}, 15px)`;
-        grid.style.gridGap = '1px'; */
         gridContainer.appendChild(grid);
 
         // Crear celdas
@@ -256,9 +255,6 @@
             const cell = document.createElement('div');
             cell.id = `mini-${heuristica}-${x}-${y}`;
             cell.classList.add('cell');
-            /* cell.style.width = '15px';
-            cell.style.height = '15px';
-            cell.style.backgroundColor = 'white'; */
             grid.appendChild(cell);
           }
         }
