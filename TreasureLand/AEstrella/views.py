@@ -32,7 +32,7 @@ def cargar_grafo(request, grafo_id):
             'walls': grafo.muros
         })
     except Grafo.DoesNotExist:
-        return JsonResponse({'error': 'Grafo no encontrado'}, status=404)
+        return JsonResponse({'error': 'Grafo no encontrado papu'}, status=404)
 
 def grafo_json(request):
     G = nx.Graph()

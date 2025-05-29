@@ -29,18 +29,18 @@
   <script >
     function getCookie(name) {
     let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + "=")) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
-      }
     }
     return cookieValue;
-  }
+}
   function cargarListaGrafos() {
     fetch('/AEstrella/listar-grafos/')
       .then(res => res.json())
@@ -63,6 +63,9 @@
   
 </head>
 <body>
+  <form style="display:none">
+  {% csrf_token %}
+</form>
   <h1 style="text-align: center;">Grilla con Obstáculos y A*</h1>
   <div style="text-align: center; margin: 10px;">
     <input type="text" id="nombre-grafo" placeholder="Nombre del grafo">
@@ -138,6 +141,7 @@
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken
           },
+          credentials: "same-origin",
           body: JSON.stringify({
             size: size,
             start: start,
